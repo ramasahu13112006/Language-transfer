@@ -1,15 +1,14 @@
- import os
+import os
 from flask import Flask, render_template, request, jsonify
 from deep_translator import GoogleTranslator
 from langdetect import detect, DetectorFactory
 
 DetectorFactory.seed = 0
 
-app = Flask(__name__)
+# Template folder path explicitly mention karna Vercel ke liye zaruri hai
+app = Flask(__name__, template_folder='templates')
 
-# Expanded World Languages List
 LANGUAGES = {
-    # Asian Languages
     'hi': 'Hindi (हिंदी)',
     'en': 'English',
     'zh-cn': 'Chinese Simplified (中文)',
@@ -26,8 +25,6 @@ LANGUAGES = {
     'th': 'Thai (ไทย)',
     'vi': 'Vietnamese (Tiếng Việt)',
     'id': 'Indonesian (Bahasa Indonesia)',
-
-    # European Languages
     'es': 'Spanish (Español)',
     'fr': 'French (Français)',
     'de': 'German (Deutsch)',
@@ -39,11 +36,9 @@ LANGUAGES = {
     'pl': 'Polish (Polski)',
     'uk': 'Ukrainian (Українська)',
     'sv': 'Swedish (Svenska)',
-
-    # Middle Eastern & Others
     'tr': 'Turkish (Türkçe)',
     'fa': 'Persian (فارسی)',
-    'he': 'Hebrew (عبرية)',
+    'he': 'Hebrew (עברית)',
     'sw': 'Swahili (Kiswahili)'
 }
 
@@ -54,10 +49,7 @@ def home():
 @app.route('/translate', methods=['POST'])
 def translate():
     try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'error': 'No data provided'}), 400
-
+        data = request.get_json() or {}
         input_text = data.get('text', '').strip()
         target_lang = data.get('target_lang', 'hi')
 
@@ -73,15 +65,15 @@ def translate():
 
         return jsonify({
             'success': True,
-            'detected_lang': detected_code.upper(),
+            'detected_lang': str(detected_code).upper(),
             'translated_text': translated_text
         })
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Vercel WSGI Handler
+# Vercel Serverless Entry Point
 app = app
 
-if __name__ == '__main__':
-    app.run(debug=True)
+
+        
