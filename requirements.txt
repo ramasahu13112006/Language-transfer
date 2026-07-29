@@ -1,3 +1,5 @@
 Flask
-deep-translator
+requests
+beautifulsoup4
 gTTS
+deep-translator
