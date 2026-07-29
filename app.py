@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify
 from deep_translator import GoogleTranslator
 from langdetect import detect, DetectorFactory
 from gtts import gTTS
