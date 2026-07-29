@@ -1,9 +1,7 @@
-import os
+ import os
 from flask import Flask, render_template, request, jsonify
 from deep_translator import GoogleTranslator
 from langdetect import detect, DetectorFactory
-from gtts import gTTS
-import io
 
 DetectorFactory.seed = 0
 
@@ -45,7 +43,7 @@ LANGUAGES = {
     # Middle Eastern & Others
     'tr': 'Turkish (Türkçe)',
     'fa': 'Persian (فارسی)',
-    'he': 'Hebrew (עברית)',
+    'he': 'Hebrew (عبرية)',
     'sw': 'Swahili (Kiswahili)'
 }
 
@@ -57,6 +55,9 @@ def home():
 def translate():
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
         input_text = data.get('text', '').strip()
         target_lang = data.get('target_lang', 'hi')
 
@@ -79,26 +80,8 @@ def translate():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/tts', methods=['POST'])
-def text_to_speech():
-    try:
-        data = request.get_json()
-        text = data.get('text', '').strip()
-        lang = data.get('lang', 'en')
-
-        if not text:
-            return jsonify({'error': 'No text provided'}), 400
-
-        # Dynamic gTTS Generation
-        tts = gTTS(text=text, lang=lang, slow=False)
-        fp = io.BytesIO()
-        tts.write_to_fp(fp)
-        fp.seek(0)
-
-        return send_file(fp, mimetype='audio/mpeg')
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+# Vercel WSGI Handler
+app = app
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
