@@ -68,12 +68,6 @@
             gap: 20px;
         }
 
-        @media (max-width: 768px) {
-            .translator-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
         .box {
             display: flex;
             flex-direction: column;
@@ -86,12 +80,15 @@
             align-items: center;
             font-size: 0.9rem;
             color: #cbd5e1;
+            flex-wrap: wrap;
+            gap: 8px;
         }
 
         .header-controls {
             display: flex;
             align-items: center;
             gap: 8px;
+            flex-wrap: wrap;
         }
 
         select {
@@ -194,6 +191,72 @@
             border-radius: 6px;
             font-size: 0.8rem;
         }
+
+        /* =======================================
+           📱 MEDIA QUERIES (Responsive Design)
+           ======================================= */
+
+        /* Tablets & Mobile Screens (Up to 768px) */
+        @media (max-width: 768px) {
+            body {
+                padding: 12px;
+            }
+
+            .glass-card {
+                padding: 22px 18px;
+                border-radius: 18px;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .translator-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            textarea {
+                height: 150px;
+            }
+        }
+
+        /* Small Mobile Devices (Up to 480px) */
+        @media (max-width: 480px) {
+            .header-icon {
+                width: 50px;
+                height: 50px;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .header p {
+                font-size: 0.85rem !important;
+            }
+
+            .action-btn {
+                padding: 4px 8px;
+                font-size: 0.78rem;
+            }
+
+            select {
+                padding: 6px 10px;
+                font-size: 0.85rem;
+                width: 100%;
+            }
+
+            .box-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .btn {
+                padding: 12px 18px;
+                font-size: 0.98rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -211,7 +274,7 @@
             <div class="box-header">
                 <div class="header-controls">
                     <span>Input Text</span>
-                    <!-- 🎙️ Receiver / Voice Input Button -->
+                    <!-- 🎙️ Voice Input Button -->
                     <button class="action-btn" id="micBtn" onclick="startSpeechRecognition()" title="Speak to Type">
                         <svg viewBox="0 0 24 24">
                             <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
@@ -261,7 +324,14 @@
 <script>
     let currentDetectedLang = 'en';
 
-    // 🎙️ Speech Recognition (Voice Receiver)
+    // Pre-load Web Speech API voices
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = () => {
+            window.speechSynthesis.getVoices();
+        };
+    }
+
+    // 🎙️ Speech Recognition
     function startSpeechRecognition() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -341,8 +411,17 @@
         }
     }
 
-    // 🔊 Enhanced Audio Functionality with Web Speech API Fallback
-    async function playAudio(elementId, langCode) {
+    function getBCP47Tag(code) {
+        const langMap = {
+            'hi': 'hi-IN', 'en': 'en-US', 'es': 'es-ES', 'fr': 'fr-FR',
+            'de': 'de-DE', 'zh': 'zh-CN', 'ja': 'ja-JP', 'ru': 'ru-RU',
+            'ar': 'ar-SA', 'bn': 'bn-IN', 'ta': 'ta-IN', 'te': 'te-IN',
+            'mr': 'mr-IN', 'gu': 'gu-IN', 'kn': 'kn-IN', 'pa': 'pa-IN'
+        };
+        return langMap[code.toLowerCase()] || code;
+    }
+
+    function playAudio(elementId, langCode) {
         const text = document.getElementById(elementId).value;
 
         if (!text.trim() || text === 'Translating...' || text.startsWith('Error:')) {
@@ -350,37 +429,29 @@
             return;
         }
 
-        // Try Flask Backend TTS First
-        try {
-            const response = await fetch('/tts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: text, lang: langCode || 'en' })
-            });
-
-            if (response.ok) {
-                const blob = await response.blob();
-                const audioUrl = URL.createObjectURL(blob);
-                const audio = new Audio(audioUrl);
-                await audio.play();
-                return;
-            }
-        } catch (err) {
-            console.warn('Backend TTS failed, falling back to Browser SpeechSynthesis:', err);
+        if (!('speechSynthesis' in window)) {
+            alert('Your browser does not support text-to-speech.');
+            return;
         }
 
-        // Browser Native TTS Fallback
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel(); // Stop ongoing speech
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = langCode || 'en-US';
-            utterance.rate = 0.9; // Slightly clearer pace
-            window.speechSynthesis.speak(utterance);
-        } else {
-            alert('Audio play karne me problem ho rahi hai.');
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        const formattedLang = getBCP47Tag(langCode || 'en');
+        utterance.lang = formattedLang;
+        utterance.rate = 0.95;
+
+        const voices = window.speechSynthesis.getVoices();
+        const matchedVoice = voices.find(v => v.lang.toLowerCase() === formattedLang.toLowerCase() || v.lang.startsWith(langCode));
+        
+        if (matchedVoice) {
+            utterance.voice = matchedVoice;
         }
+
+        window.speechSynthesis.speak(utterance);
     }
 </script>
 
 </body>
-  </html>
+</html>
+                     
